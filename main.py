@@ -14,10 +14,10 @@ ADMIN_ID = 5663190258
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 
-# Telegram application
-application = ApplicationBuilder().token(TOKEN).build()
+# Application yaratish
+application = None
 
-# DB connection
+# DB sozlamasi
 conn = sqlite3.connect("users.db", check_same_thread=False)
 c = conn.cursor()
 c.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY)")
@@ -34,7 +34,7 @@ async def is_member(user_id):
     except:
         return False
 
-# /start
+# /start komandasi
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     save_user(user.id)
@@ -53,10 +53,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
-# callback va/xabarlar
+# Oddiy matnni qabul qilish
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Xabar qabul qilindi!")
 
+# Callback tugmalar
 async def button_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -80,10 +81,14 @@ def home():
 
 # Main
 if __name__ == "__main__":
-    WEBHOOK_URL = f"https://multfilmboti.onrender.com/{TOKEN}"
-    asyncio.run(application.bot.set_webhook(WEBHOOK_URL))
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(button_cb))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    async def run_bot():
+        global application
+        application = ApplicationBuilder().token(TOKEN).build()
+        application.add_handler(CommandHandler("start", start))
+        application.add_handler(CallbackQueryHandler(button_cb))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        await application.bot.set_webhook(f"https://multfilmboti.onrender.com/{TOKEN}")
+
+    asyncio.run(run_bot())
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
